@@ -8,6 +8,6 @@ This is a temporary repo of wind sensor data publisher.
 
 4. cd $(THE_CATKIN_WORKSPACE)
 
-5. bash $(CATKIN_WORKSPACE)/src/WindSensorNode/launch_wind_sensor_docker.sh
+5. bash $(CATKIN_WORKSPACE)/src/SerialDrivers/launch_wind_sensor_docker.sh
 
-6. bash $(CATKIN_WORKSPACE)/src/WindSensorNode/run_wind_sensor_node.sh
+6. bash $(CATKIN_WORKSPACE)/src/SerialDrivers/run_wind_sensor_node.sh

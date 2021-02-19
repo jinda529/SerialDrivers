@@ -1,0 +1,3 @@
+<launch>
+  <node pkg="MiranSensorInfo" name="MiranSensorInfo" type="MiranSensorInfo" />  
+</launch>

@@ -82,6 +82,7 @@ int main (int argc, char** argv)
         ser_count++;        
         if (ser.isOpen())
         {
+            std::cout << "ser_count is " << ser_count << std::endl;
             if (ser_count == 1)
             {
                 ser.write(request_buf,8);
@@ -94,12 +95,17 @@ int main (int argc, char** argv)
                 }
 
                 WindSensorInfo_pub.publish(wind_sensor_data);
+                std::cout << wind_sensor_data << std::endl;
+                std::cout << "===========================" << std::endl;
             }  
             if (ser_count == 10)
             {
                 ser_count = 0;
             }
 
+        }
+        else {
+            std::cout << "ser.Open() is false" << std::endl;
         }
         ros::spinOnce();
         loop_rate.sleep();
