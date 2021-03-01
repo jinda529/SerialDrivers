@@ -7,4 +7,4 @@ sudo chmod 777 /dev/ttyUSB2;
 cd $( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )/../../;
 catkin_make;
 source ./devel/setup.bash;
-rosrun WindSensorInfo WindSensorInfo;
+rosrun ProtractorInfo ProtractorInfo;

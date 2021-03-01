@@ -1,0 +1,3 @@
+float64 timestamp
+float64 axis_1_angle_degree
+float64 axis_2_angle_degree

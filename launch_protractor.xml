@@ -1,0 +1,3 @@
+<launch>
+  <node pkg="ProtractorInfo" name="ProtractorInfo" type="ProtractorInfo" />  
+</launch>
