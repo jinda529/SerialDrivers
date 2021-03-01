@@ -1,8 +1,11 @@
-This is a temporary repo of wind sensor data publisher.
+This is a repo publishing several of our sensors which may be installed on our vehicle.
+These sensors include WindSpeed sensor, MiranLength sensor and DigitalProtractor.
+The signals of all of these sensors are transmitted via RS232 or RS485 serial and converted to USB.
+Any question please contact mingcong.li@plus.ai
 
-1. clone this repo under a catkin workspace, such as ~/catkin_ws
+1. clone this repo under a catkin workspace src dir, such as ~/catkin_ws/src
 
-2. make sure drive docker is updated to the latest, and your internet is good
+2. make sure drive docker is updated to the latest, and internet is connected
 
 3. (roscore in another terminal, or connect to ros master)
 
