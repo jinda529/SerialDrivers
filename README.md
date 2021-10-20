@@ -3,7 +3,7 @@ These sensors include WindSpeed sensor, MiranLength sensor and DigitalProtractor
 The signals of all of these sensors are transmitted via RS232 or RS485 serial and converted to USB.
 Any question please contact mingcong.li@plus.ai
 
-1. clone this repo under a catkin workspace src dir, such as ~/catkin_ws/src
+1. clone this repo under a catkin workspace src dir, such as ~/catkin_ws/src/
 
 2. make sure drive docker is updated to the latest, and internet is connected
 
@@ -13,4 +13,6 @@ Any question please contact mingcong.li@plus.ai
 
 5. bash $(CATKIN_WORKSPACE)/src/SerialDrivers/launch_serial_docker.sh
 
-6. bash $(CATKIN_WORKSPACE)/src/SerialDrivers/run_miran_sensor_node.sh
+6. to install those packages, bash $(CATKIN_WORKSPACE)/src/SerialDrivers/preparation_for_launching_driver.sh
+
+7. to run miran sensor directly, bash $(CATKIN_WORKSPACE)/src/SerialDrivers/run_miran_sensor_node.sh

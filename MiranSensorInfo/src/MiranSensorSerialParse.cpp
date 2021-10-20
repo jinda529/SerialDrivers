@@ -96,12 +96,12 @@ int main(int argc, char **argv)
             if (ser_count == 9 && ser.available())
             {
                 ser_num = ser.read(ser_buffer, ser.available());
-                std::cout << ser_num << std::endl;
-                // int index = 0;
-                // while (index < ser_num) {
-                //     std::cout << std::hex << static_cast<int>(ser_buffer[index]) << std::endl;
-                //     index ++;
-                // }
+                // std::cout << ser_num << std::endl;
+                int index = 0;
+                while (index < ser_num) {
+                    // std::cout << std::hex << static_cast<int>(ser_buffer[index]) << std::endl;
+                    index ++;
+                }
                 if (data_parse_successful(ser_num, ser_buffer))
                 {
                     std::cout << miran_sensor_data << std::endl;
