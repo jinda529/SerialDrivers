@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package>
-  <name>MiranSensorInfo</name>
+  <name>SteeringWheelSensorInfo</name>
   <version>0.0.0</version>
-  <description>The MiranSensorInfo package</description>
+  <description>The SteeringWheelSensorInfo package</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag --> 
   <!-- Example:  -->

@@ -1,0 +1,3 @@
+<launch>
+  <node pkg="SteeringWheelSensorInfo" name="SteeringWheelSensorInfo" type="SteeringWheelSensorInfo" />  
+</launch>
