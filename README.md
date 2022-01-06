@@ -16,3 +16,5 @@ Any question please contact mingcong.li@plus.ai
 6. to install those packages, bash $(CATKIN_WORKSPACE)/src/SerialDrivers/preparation_for_launching_driver.sh
 
 7. to run miran sensor directly, bash $(CATKIN_WORKSPACE)/src/SerialDrivers/run_miran_sensor_node.sh
+
+Note that these codes are originally copied from internet and modified by my friend Jintao Zhao and myself, and only used by me in vehicle testing while containing no intellectual property from PlusAI. Anyone is welcomed to use the code and modify it freely by themselves.
