@@ -1,0 +1,305 @@
+#!/usr/bin/env python
+
+# Simple command-line tool to echo ros messages. See --help for usage.
+
+import argparse
+import os
+import sys
+import errno
+
+from control.cmd_report_pb2 import CmdReport
+from dbw_mkz_msgs.msg import BrakeCmd
+from dbw_mkz_msgs.msg import BrakeInfoReport
+from dbw_mkz_msgs.msg import BrakeReport
+from dbw_mkz_msgs.msg import FuelLevelReport
+from dbw_mkz_msgs.msg import GearCmd
+from dbw_mkz_msgs.msg import GearReport
+from dbw_mkz_msgs.msg import Misc1Report
+from dbw_mkz_msgs.msg import SteeringCmd
+from dbw_mkz_msgs.msg import SteeringReport
+from dbw_mkz_msgs.msg import SurroundReport
+from dbw_mkz_msgs.msg import SuspensionReport
+from dbw_mkz_msgs.msg import ThrottleCmd
+from dbw_mkz_msgs.msg import ThrottleInfoReport
+from dbw_mkz_msgs.msg import ThrottleReport
+from dbw_mkz_msgs.msg import TirePressureReport
+from dbw_mkz_msgs.msg import WheelSpeedReport
+from perception.lane_detection_pb2 import LaneDetection
+from nav_msgs.msg import Odometry
+from perception.obstacle_detection_pb2 import ObstacleDetection
+from perception.obstacle_detection_pb2 import VehicleState
+from planning.planning_trajectory_pb2 import PlanningTrajectory
+from planning.planning_trajectory_pb2 import JerkInfo, LeadInfo
+from prediction.prediction_obstacle_pb2 import PredictionObstacles
+from perception.traffic_light_detection_pb2 import TrafficLightDetection
+import rosbag
+import rospy
+from sensor_msgs.msg import Imu
+from sensor_msgs.msg import JointState
+from sensor_msgs.msg import NavSatFix
+from sensor_msgs.msg import PointCloud
+from sensor_msgs.msg import PointCloud2
+from sensor_msgs.msg import PointField
+from sensor_msgs.msg import TimeReference
+from std_msgs.msg import Bool
+from std_msgs.msg import Float64
+from std_msgs.msg import String
+from google.protobuf import text_format
+# from control_v2.vehicle_state_pb2 import VehicleState as ControlVehicleState
+from control.control_command_pb2 import ControlCommand
+from monitor.status_report_msg_pb2 import StatusReport
+from control.dbw_reports_pb2 import DbwReports
+from system_metrics.qnx_system_metrics_pb2 import ProcessState
+from system_metrics.qnx_system_metrics_pb2 import SystemMetrics
+from metrics.latency_report_pb2 import LatencyReport
+from localization.localization_pb2 import LocalizationEstimation
+from monitor.app_watchdog_state_pb2 import AppWatchdogState
+from monitor.engage_cmd_pb2 import EngageCmd
+
+
+LOG_ENABLE = True
+ECHO_COUNT = 0  # number of messages echoed
+MSG_NUMBER = 0  # number of messages processed (some may not be echoed)
+
+
+def log(msg):
+    global LOG_ENABLE
+    if LOG_ENABLE:
+        print '## ' + msg
+        sys.stdout.flush()
+
+
+def echo_msg(args, msg, topic_name, msg_type, parse_from_string):
+    global ECHO_COUNT
+    global MSG_NUMBER
+
+    try:
+        # Stop echo after we've reached message count limit
+        if args.msg_count is not None and int(ECHO_COUNT) >= int(args.msg_count):
+            return
+
+        MSG_NUMBER += 1
+
+        if args.skip_count is not None and int(MSG_NUMBER) <= int(args.skip_count):
+            return
+
+        ECHO_COUNT += 1
+
+        if parse_from_string:
+            pb_obj = msg_type()
+            pb_obj.ParseFromString(msg.data)
+        else:
+            pb_obj = msg
+        prefix = ''
+        if args.clear:
+            prefix = '\033[2J\033[;H'
+        if args.separator:
+            prefix += '### [{}] topic:{} type:{}\n'.format(MSG_NUMBER, topic_name, str(msg_type.__name__))
+
+        if args.one_line_format:
+            print prefix + text_format.MessageToString(pb_obj,False ,True)
+        else:
+            print prefix + str(pb_obj)
+        sys.stdout.flush()
+    except KeyboardInterrupt:
+        sys.exit(0)
+    except IOError, e:
+        if e.errno == errno.EPIPE:
+            sys.exit(0)
+        else:
+            raise
+
+
+def listen_topic(args, name, type, parse_from_string):
+    if parse_from_string:
+        rospy.Subscriber(name, String, lambda msg: echo_msg(args, msg, name, type, parse_from_string))
+    else:
+        rospy.Subscriber(name, type, lambda msg: echo_msg(args, msg, name, type, parse_from_string))
+
+
+def topic_match(actual, matcher):
+    # TODO: Support regex matcher
+    if actual == matcher:
+        return True
+    return False
+
+
+def do_echo_from_ros(echo_topics, args):
+    for topic_name, topic_info in echo_topics.iteritems():
+        (topic_type, topic_parse_from_string) = topic_info
+        listen_topic(args, topic_name, topic_type, topic_parse_from_string)
+
+    rospy.init_node('plusecho_node', anonymous=True, log_level=rospy.ERROR)
+
+    try:
+        while not rospy.is_shutdown():
+            if args.msg_count is not None and int(ECHO_COUNT) >= int(args.msg_count):
+                break
+            rospy.spin()
+    except KeyboardInterrupt:
+        log('Aborted!')
+
+
+def do_echo_from_file(echo_topics, args):
+    bag_file = args.bag
+    if not os.path.exists(bag_file):
+        raise Exception('bag file {} does not exist'.format(bag_file))
+
+    topics = set(echo_topics.keys())
+    log('Opening bag file {} ...'.format(bag_file))
+    with rosbag.Bag(bag_file) as bag:
+        log('Bag file opened. Processing now.')
+        count = 0
+        for topic_name, msg, timestamp in bag.read_messages():
+            if topic_name not in topics:
+                continue
+            if args.msg_count is not None and int(ECHO_COUNT) >= int(args.msg_count):
+                break
+            (topic_type, topic_parse_from_string) = echo_topics[topic_name]
+            echo_msg(args, msg, topic_name, topic_type, topic_parse_from_string)
+            count += 1
+
+
+def main():
+    parser = argparse.ArgumentParser(description='Echo PlusAI custom ros messages')
+    parser.add_argument('topics', help='topics to echo',
+                        metavar='topic', nargs='+')
+    parser.add_argument("-c", "--clear", help="clear screen before printing next message",
+                        dest="clear", default=False, action="store_true")
+    parser.add_argument("-q", "--quiet", help="silent log output",
+                        dest="quiet", default=False, action="store_true")
+    parser.add_argument("-s", "--separator", help="show info separator before each message",
+                        dest="separator", default=False, action="store_true")
+    parser.add_argument("-o", "--one-line", help="print messages in one-line (compact format)",
+                        dest="one_line_format", default=False, action="store_true")
+    parser.add_argument("-b", "--bag", help="echo messages from .bag file",
+                        dest="bag", default=None, metavar="BAGFILE")
+    parser.add_argument("-n", "--count", help="limit number of messages to echo",
+                        dest="msg_count", default=None, metavar="COUNT")
+    parser.add_argument("--skip", help="number of messages to skip before first echo",
+                        dest="skip_count", default=None, metavar="COUNT")
+
+    args = parser.parse_args()
+    args.topics = set(args.topics)
+
+    global LOG_ENABLE
+    if args.quiet:
+        LOG_ENABLE = False
+
+    # Map of all supported topics with their respective msg types. value is (type, parse_from_string)
+    supported_topics = {
+        # plusai (custom)
+        '/localization/gnss': (LocalizationEstimation, True),
+        '/localization/odometry': (LocalizationEstimation, True),
+        '/localization/state': (LocalizationEstimation, True),
+        '/plusai/control/cmd_report': (CmdReport, True),
+        '/plusai/control_report': (CmdReport, True),
+        '/perception/lane_path': (LaneDetection, True),
+        '/perception/traffic_lights': (TrafficLightDetection, True),
+        '/perception/obstacles': (ObstacleDetection, True),
+        '/perception/simulated_obstacles': (ObstacleDetection, True),
+        '/perception/vehicle_motion': (VehicleState, True),
+        '/threat_assessment/obstacles': (ObstacleDetection, True),
+        '/planning/jerk_info': (JerkInfo, True),
+        '/planning/lead_info': (LeadInfo, True),
+        '/planning/trajectory' : (PlanningTrajectory, True),
+        '/prediction/obstacles' : (PredictionObstacles, True),
+        # '/vehicle/status': (ControlVehicleState, True),
+        '/vehicle/dbw_reports': (DbwReports, True),
+        '/system_metrics': (SystemMetrics, True),
+        '/vehicle/control_cmd': (ControlCommand, True),
+        '/watchdog/current_state': (AppWatchdogState, True),
+        '/vehicle/engage_cmd': (EngageCmd, True),
+
+        # dbw_mkz_msgs
+        '/vehicle/brake_cmd': (BrakeCmd, False),
+        '/vehicle/brake_info_report': (BrakeInfoReport, False),
+        '/vehicle/brake_report': (BrakeReport, False),
+        '/vehicle/fuel_level_report': (FuelLevelReport, False),
+        '/vehicle/gear_report': (GearReport, False),
+        '/vehicle/misc_1_report': (Misc1Report, False),
+        '/vehicle/steering_cmd': (SteeringCmd, False),
+        '/vehicle/steering_report': (SteeringReport, False),
+        '/vehicle/surround_report': (SurroundReport, False),
+        '/vehicle/suspension_report': (SuspensionReport, False),
+        '/vehicle/throttle_cmd': (ThrottleCmd, False),
+        '/vehicle/throttle_info_report': (ThrottleInfoReport, False),
+        '/vehicle/throttle_report': (ThrottleReport, False),
+        '/vehicle/tire_pressure_report': (TirePressureReport, False),
+        '/vehicle/wheel_speed_report': (WheelSpeedReport, False),
+
+        # std_msgs
+        '/vehicle/dbw_enabled': (Bool, False),
+        '/vehicle/filtered_accel': (Float64, False),
+
+        # sensor_msgs
+        '/imu/data': (Imu, False),
+        '/vehicle/imu/data_raw': (Imu, False),
+        '/center_32e/velodyne_points': (PointCloud2, False),
+        '/kanza/kanza_point_cloud': (PointCloud, False),
+        '/left_bottom_puck/velodyne_points': (PointCloud2, False),
+        '/left_top_puck/velodyne_points': (PointCloud2, False),
+        '/navsat/fix': (NavSatFix, False),
+        '/right_bottom_puck/velodyne_points': (PointCloud2, False),
+        '/right_top_puck/velodyne_points': (PointCloud2, False),
+        '/unified/velodyne_points': (PointCloud2, False),
+        '/vehicle/gps/fix': (NavSatFix, False),
+        '/vehicle/gps/time': (TimeReference, False),
+        '/vehicle/joint_states': (JointState, False),
+        '/vehicle/sonar_cloud': (PointCloud2, False),
+
+        # status_reports
+        '/control/status_report': (StatusReport, True),
+        '/lane/status_report': (StatusReport, True),
+        '/planning/status_report': (StatusReport, True),
+        '/prediction/status_report': (StatusReport, True),
+        '/conti_bottom_rear_left_radar/status_report': (StatusReport, True),
+        '/conti_bottom_rear_right_radar/status_report': (StatusReport, True),
+        '/conti_bumper_radar/status_report': (StatusReport, True),
+        '/lane/status_report': (StatusReport, True),
+        '/localization/status_report': (StatusReport, True),
+        '/obstacle/status_report': (StatusReport, True),
+        '/vehicle/status_report': (StatusReport, True),
+        '/watchdog/status_report': (StatusReport, True),
+
+        # latency_reports
+        '/faw_can_node/latency_report': (LatencyReport, True),
+        '/front_cameras/latency_report': (LatencyReport, True),
+        '/side_rear_cameras/latency_report': (LatencyReport, True),
+        '/controller_ros_node/latency_report': (LatencyReport, True),
+        '/fusion_object_tracker/latency_report': (LatencyReport, True),
+        '/lane_detector/latency_report': (LatencyReport, True),
+        '/localization/latency_report': (LatencyReport, True),
+        '/prediction/latency_report': (LatencyReport, True),
+        '/scenario_planner/latency_report': (LatencyReport, True),
+    }
+
+    echo_topics = {}
+    for arg_topic in set(args.topics):
+        matched = False
+        for topic_name, topic_info in supported_topics.iteritems():
+            if not topic_match(topic_name, arg_topic):
+                continue
+            matched = True
+            echo_topics[topic_name] = supported_topics[topic_name]
+        if not matched:
+            raise Exception('Topic "{}" does not match any supported/known topic'.format(arg_topic))
+
+    log('Topics to be echoed: {}'.format(str(sorted(echo_topics.keys()))))
+
+    if args.bag is None:
+        do_echo_from_ros(echo_topics, args)
+    else:
+        do_echo_from_file(echo_topics, args)
+
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        sys.exit(0)
+    except IOError, e:
+        if e.errno == errno.EPIPE:
+            sys.exit(0)
+        else:
+            raise
