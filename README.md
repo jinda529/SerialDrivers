@@ -5,7 +5,7 @@ cd  catin_ws/src
 git clone git@github.com:jinda529/SerialDrivers.git  
 cd  ..  
 source /opt/ros/melodic/setup.bash  
-sudo apt-get update
+sudo apt-get update  
 sudo apt-get `--`assume-yes install ros-melodic-serial  
 sudo apt-get `--`assume-yes install libserial-dev  
 sudo chmod 777 /dev/ttyUSB0  
