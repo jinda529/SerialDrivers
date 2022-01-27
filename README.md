@@ -7,7 +7,7 @@ cd  ..
 source /opt/ros/melodic/setup.bash  
 sudo apt-get update  
 sudo apt-get `--`assume-yes install ros-melodic-serial  
-sudo apt-get `--`assume-yes install libserial-dev
+sudo apt-get `--`assume-yes install libserial-dev  
 sudo apt-get install ros-melodic-cmake-modules  
 sudo chmod 777 /dev/ttyUSB0  
 sudo chmod 777 /dev/ttyUSB1  
